@@ -1,0 +1,397 @@
+<apex:page cache="false" controller="AssetInspectionController" standardStylesheets="false" showHeader="false" sidebar="false" applyHtmlTag="false" applyBodyTag="false" docType="html-5.0">
+  <html xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet"></link>
+    <apex:includeScript value="https://code.jquery.com/jquery.js" />
+    <apex:includeScript value="/resource/leaflet/leaflet.js" />
+    <apex:stylesheet value="/resource/leaflet/leaflet.css" />
+    <style>
+    .photobtn {
+      position: relative;
+      top: -37px;
+      left: 0px;
+      padding: 4px 4px;
+      font-size: 13px;
+      text-align: center;
+      cursor: pointer;
+      background: #FFA500;
+      color: #fff;
+      border-radius: 5px;
+      border: 1px black solid;
+    }
+    
+    .camera {
+      width: 23px;
+      height: 23px;
+    }
+    
+    .photofile {
+      position: relative;
+      right: -19px;
+    }
+    </style>
+    <script>
+    var map;
+
+    function populate() {
+      //document.getElementById('name').value = 'Valerie Johnston';
+      //document.getElementById('email').value = 'valeriejohnstonsf@gmail.com';
+      //document.getElementById('phone').value = '303-555-1212';
+      //document.getElementById('subject').value = 'Water on floor at gate 23 in Terminal A';
+      //document.getElementById('description').value = 'There is water leaking from overhead ceiling tiles!';
+      //document.getElementById('type').value = 'Walkways';
+    }
+
+    function setDemoCoords() {
+      //document.getElementById('0BC61000000Gvqz').value = '32.9037333';
+      //document.getElementById('0BC61000000Gvr0').value = '-97.0359454';
+    }
+
+    function setLocation(position) {
+      console.log('Coords: ' + position.coords.latitude + ',' + position.coords.longitude);
+      document.getElementById('{!$Component.theForm.latitude}').value = trimCoords('' + position.coords.latitude);
+      document.getElementById('{!$Component.theForm.longitude}').value = trimCoords('' + position.coords.longitude);
+      document.getElementById('currCoords').textContent = trimCoords('' + position.coords.latitude) + ',' + trimCoords('' + position.coords.longitude);
+    }
+
+    function trimCoords(coord) {
+      var i = coord.indexOf(".");
+      console.log("i=" + i);
+      if (i >= 0) {
+        console.log("val1=" + coord.substring(0, i + 6));
+        return coord.substring(0, i + 7);
+      } else {
+        console.log("val2=" + coord);
+        return coord;
+      }
+    }
+
+    function init() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(setLocation);
+        console.log('Retrieving current pos...');
+      } else {
+        alert("Geolocation is not supported by this browser");
+      }
+
+
+    }
+    </script>
+  </head>
+
+  <body onload="init()">
+    <div class="container">
+      <!--
+    <apex:image id="logo" value="{!$Resource.UDOTLogo}" StyleClass="img-responsive center-block" width="70%" />
+    <h1 class="label label-default center-block">Asset Inspection</h1><p/>
+    -->
+      <apex:form html-role="form" id="theForm">
+        <apex:actionFunction action="{!selectAsset}" name="selectAsset" rerender="theForm">
+          <apex:param name="firstParam" assignTo="{!selectedAssetId}" value="" />
+        </apex:actionFunction>
+        <apex:outputPanel rendered="{!nearbyList.size > 0}">
+          <apex:commandbutton StyleClass="btn btn-lg btn-primary btn-block" action="{!backToAsset}" value="Back" />
+          <br/>
+          <div id="map" style="height:500px;"></div>
+          <script>
+          var greenIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
+
+          var greyIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
+
+          var yellowIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
+
+          var blueIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
+
+          var redIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
+          //var markersLayer = new L.LayerGroup();
+          //var markersLayerList = [];
+          //markersLayerList.push(markersLayer);
+
+          map = L.map('map', {
+              zoomControl: false
+            })
+            .setView([{!asset.Begin_Location__Latitude__s
+            }, {!asset.Begin_Location__Longitude__s
+            }], 15);
+          L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+              attribution: 'Tiles © Esri'
+            }).addTo(map);
+
+          var locationCoor = [];
+          var i = 0;
+
+
+          <apex:repeat value="{!nearbyList}" var="na" >
+          var latLng = [{!na.asset.Begin_Location__Latitude__s
+          }, {!na.asset.Begin_Location__Longitude__s
+          }];
+          locationCoor[i++] = latLng;
+
+          var popup = L.popup()
+            .setLatLng(latLng)
+            .setContent('<div onclick="selectAsset(\'{!na.asset.id}\');"><h4>{!na.asset.Name}</h4>' +
+              '{!na.asset.RecordType.Name}' +
+              '<br/>{!na.asset.MUTCD_Description__c}</div>');
+
+          var iconVar = greenIcon;
+
+          var condition = '{!na.asset.Condition__c}';
+          console.log('condition=', condition);
+
+          if (condition == 'GOOD') {
+            iconVar = greenIcon;
+          } else if (condition == 'FAIR') {
+            iconVar = yellowIcon;
+          } else if (condition == 'BAD') {
+            iconVar = redIcon;
+          } else {
+            iconVar = greyIcon;
+          }
+
+          var marker = L.marker(latLng, {
+            icon: iconVar
+          }).addTo(map);
+          marker.bindPopup(popup); 
+          </apex:repeat>
+
+          var marker = L.marker([{!asset.Begin_Location__Latitude__s}, {!asset.Begin_Location__Longitude__s}], {icon: blueIcon }).addTo(map);
+
+
+          var bounds = new L.latLngBounds(locationCoor);
+          map.fitBounds(bounds, {
+            padding: [50, 50]
+          });
+
+          </script>
+          <apex:repeat value="{!nearbyList}" var="assetW">
+            <div class="card" id="{!asset.id}" onclick="selectAsset('{!asset.id}');">
+              <div class="card-block" style="padding-left: 5px">
+                <!-- <h4 class="card-title">{!asset.name}</h4> -->
+                <p class="card-text">
+                  <table width="100%" border="1" bordercolor="#bfbfbf">
+                    <tr bgcolor="{!IF(assetW.asset.Condition__c == 'GOOD', '#47d147', IF(assetW.asset.Condition__c == 'FAIR', '#ffffb3', IF(assetW.asset.Condition__c == 'BAD', '##ff6666', '#cccccc')))}">
+                      <td nowrap="true" valign="top" colspan="2">
+                        <table width="100%">
+                          <tr>
+                            <td width="50%">
+                              <b>{!assetW.asset.name}</b>
+                            </td>
+                            <td align="right" width="50%">
+                              <b>{!assetW.asset.Condition__c}&nbsp;</b>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              {!assetW.asset.RecordType.Name}
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td width="50%" align="center">
+                        <b>{!assetW.distance} ft</b>
+                        <br/>Distance
+                      </td>
+                      <td align="center">
+                        <b>{!assetW.asset.MUTCD__c}</b>
+                        <br/>MUTCD
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center">
+                        <b>{!assetW.asset.Region__c}</b>
+                        <br/>Region
+                      </td>
+                      <td align="center">
+                        <b>{!assetW.asset.Station__c}</b>
+                        <br/>Station
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="2">
+                        {!assetW.asset.MUTCD_Description__c}
+                      </td>
+                    </tr>
+                  </table>
+                  <!--
+                  <table>
+                    <tr>
+                      <td nowrap="true" valign="top"><b>Distance:</b>
+                      </td>
+                      <td>{!assetW.distance} ft
+                      </td>
+                    </tr>
+                    <tr>
+                      <td nowrap="true" valign="top"><b>Type:</b>
+                      </td>
+                      <td>{!assetW.asset.RecordType.Name}
+                      </td>
+                    </tr>
+                                        <tr>
+                      <td nowrap="true" valign="top"><b>Condition:</b>
+                      </td>
+                      <td>{!assetW.asset.Condition__c}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td nowrap="true" valign="top"><b>UTOD ID:</b>
+                      </td>
+                      <td>{!assetW.asset.UDOT_ID__c}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td nowrap="true" valign="top"><b>Region:</b>
+                      </td>
+                      <td>{!assetW.asset.Region__c}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td nowrap="true" valign="top"><b>Station:</b>
+                      </td>
+                      <td>{!assetW.asset.Station__c}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td nowrap="true" valign="top"><b>MUTCD:</b>
+                      </td>
+                      <td>{!assetW.asset.MUTCD__c}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td nowrap="true" valign="top"><b>MUTDC Desc:</b>&nbsp;
+                      </td>
+                      <td>V{!assetW.asset.MUTCD_Description__c}
+                      </td>
+                    </tr>
+                  </table>
+                  -->
+                </p>
+              </div>
+            </div>
+            <br/>
+          </apex:repeat>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!nearbyList.size == 0}" id="inspecPanel">
+          <table width="100%">
+            <tr>
+              <td>
+               <div class="form-group">
+            <apex:outputLabel for="name" value="Name" />
+            <br/>
+            <apex:outputField StyleClass="form-control" id="name" value="{!asset.Name}" />
+            <!-- <script>document.getElementById('{!$Component.location}').disabled = true; </script> -->
+          </div>
+              </td>
+              <td align="right">
+                <apex:commandbutton image="{!URLFOR($Resource.LocationSearchIcon)}" action="{!findNearby}" html-width="25" html-height="25" />
+              </td>
+            </tr>
+          </table>
+         
+          <!--
+        <div class="form-group">
+            <apex:outputLabel for="condition" value="Condition"/>
+            <apex:inputField StyleClass="form-control" id="condition" value="{!inspection.Condition__c}"/>
+        </div>
+-->
+          <div class="form-group">
+            <apex:outputLabel for="condition" value="Condition" />
+            <apex:selectList StyleClass="form-control" id="condition" value="{!inspection.Condition__c}" multiselect="false">
+              <apex:selectOption itemValue="GOOD" itemLabel="GOOD" />
+              <apex:selectOption itemValue="FAIR" itemLabel="FAIR" />
+              <apex:selectOption itemValue="POOR" itemLabel="POOR" />
+              <apex:selectOption itemValue="UNREPAIRABLE" itemLabel="UNREPAIRABLE" />
+            </apex:selectList>
+          </div>
+          <div class="form-group">
+            <apex:outputLabel for="assetLoc" value="Update Asset Location?" />
+            <apex:inputCheckbox StyleClass="form-control" id="assetLoc" value="{!inspection.Update_Asset_Location__c}" />
+          </div>
+          <div class="form-group">
+            <apex:outputLabel for="locVerify" value="Request Location Verification?" />
+            <apex:inputCheckbox StyleClass="form-control" id="locVerify" value="{!inspection.Request_Location_Verification__c}" />
+          </div>
+          <div class="form-group">
+            <apex:outputLabel for="comments" value="Comments" />
+            <apex:inputTextarea StyleClass="form-control" id="comments" value="{!inspection.Comments__c}" rows="3" />
+          </div>
+          <table width="100%">
+            <tr width="100%">
+              <td width="50%">
+          <div class="form-group" id="currCoordsDiv">
+            <apex:outputLabel for="currCoords" value="Current Coordinates" />
+            <!-- <apex:outputText StyleClass="form-control" id="currCoords" value="{!currentCoords}" /> -->
+            <div StyleClass="form-control" id="currCoords">{!currentCoords}</div> 
+          </div>
+          </td>
+          <td width="50%">
+          <div class="form-group">
+            <apex:outputLabel for="assetCoords" value="Asset Coordinates" />
+            <!-- <apex:outputText StyleClass="form-control" id="assetCoords" value="{!assetCoords}" /> -->
+            <div StyleClass="form-control"><span id="assetCoords">{!assetCoords}</span></div>
+          </div>
+          </td>
+          </tr>
+          </table>
+          <div class="form-group">
+            <p>
+              <apex:inputFile id="file" styleClass="photofile" value="{!photoUpload}" accept="image/*;capture=camera" filename="{!fileName}" />
+            </p>
+          </div>
+          <span class="photobtn"><img src="https://c.na35.visual.force.com/resource/SLDS213/assets/icons/utility/photo_60.png" class="camera"/>&nbsp;Take Photo</span>
+          <p>
+            <apex:commandButton StyleClass="btn btn-lg btn-primary btn-block" action="{!submit}" value="Submit" />
+          </p>
+        </apex:outputPanel>
+        <apex:inputHidden id="latitude" value="{!latitude}" />
+        <apex:inputHidden id="longitude" value="{!longitude}" />
+      </apex:form>
+    </div>
+    <script>
+    $(".photobtn").on("click", function() {
+      $(".photofile").click();
+    });
+    </script>
+  </body>
+
+  </html>
+</apex:page>

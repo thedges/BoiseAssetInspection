@@ -1,0 +1,17 @@
+<apex:page cache="false" controller="AssetInspectionController" standardStylesheets="false" showHeader="false">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet"></link>
+  <apex:includeScript value="https://code.jquery.com/jquery.js" />
+
+ <div class="container">
+ 
+   <apex:image id="logo" value="{!$Resource.UDOTLogo}" StyleClass="img-responsive center-block"/>
+   <h1 class="label label-default center-block">Asset Inspection</h1><p/>
+
+   Your maintenance request [{!asset.Name}] has been submitted!
+   <br/><br/>
+   If your request needs immediate attention, please call <a href="tel:5121112222">512-111-2222</a>.
+
+  </div>
+
+</apex:page>

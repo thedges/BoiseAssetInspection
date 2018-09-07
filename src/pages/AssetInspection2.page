@@ -1,0 +1,96 @@
+<apex:page cache="false" controller="AssetInspectionController" showHeader="false" standardStylesheets="false" sidebar="false" applyHtmlTag="false" applyBodyTag="false" docType="html-5.0">
+  <html xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <head>
+    <title>Page Title</title>
+    <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system.css')}" />
+    <style type="text/css">
+    img {
+      border-radius: 8px;
+    }
+    
+    .slds-form-element__label {
+      font-size: 1.0rem;
+    }
+    
+    .big-btn {
+      width: 90px;
+      height: 40px;
+    }
+    
+    body {
+      font-size: 1.0rem;
+    }
+    </style>
+    <script>
+    function setLocation(position) {
+      document.getElementById('{!$Component.theForm.latitude}').value = position.coords.latitude;
+      document.getElementById('{!$Component.theForm.longitude}').value = position.coords.longitude;
+    }
+
+    function init() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(setLocation);
+      } else {
+        alert("Geolocation is not supported by this browser");
+      }
+    }
+    </script>
+  </head>
+
+  <body onload="init()">
+    <!-- REQUIRED SLDS WRAPPER -->
+    <div class="slds">
+      <!-- MASTHEAD -->
+      <h1 class="slds-text-heading--label slds-m-bottom--small">
+      Page Title
+    </h1>
+      <!-- / MASTHEAD -->
+      <!-- PRIMARY CONTENT WRAPPER -->
+      <apex:form html-role="form" id="theForm">
+        <div class="slds-form--stacked">
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="name">Name</label>
+            <div class="slds-form-element__control">
+              <input id="name" class="slds-input" type="text" placeholder="Placeholder Text" />
+              <apex:outputField StyleClass="slds-output" id="name" value="{!asset.Name}" />
+            </div>
+          </div>
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="condition">Condition</label>
+            <div class="slds-form-element__control">
+            <div class="slds-select_container">
+              <apex:selectList StyleClass="slds-select" id="condition" value="{!inspection.Condition__c}">
+                <apex:selectOption itemValue="GOOD" itemLabel="GOOD" />
+                <apex:selectOption itemValue="BAD" itemLabel="BAD" />
+                <apex:selectOption itemValue="UNREPAIRABLE" itemLabel="UNREPAIRABLE" />
+              </apex:selectList>
+              </div>
+            </div>
+          </div>
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="comments">Comments</label>
+            <div class="slds-form-element__control">
+              <apex:inputTextarea StyleClass="slds-textarea" id="comments" value="{!inspection.Comments__c}" rows="5" />
+            </div>
+          </div>
+          <div class="camera-button-div">
+            <button label="Choose Image" class="camera-button uiButton--neutral uiButton--default uiButton" id="camera_button">
+                <img src="https://c.na35.visual.force.com/resource/SLDS213/assets/icons/utility/photo_120.png" class="camera"/>
+            </button>
+            <input type="file" class="file-button" id="file" accept="image/*" />
+        </div>
+          <p>
+            <apex:commandButton StyleClass="button big-btn" action="{!submit}" value="Submit" />
+          </p>
+          <apex:inputHidden id="latitude" value="{!latitude}" />
+          <apex:inputHidden id="longitude" value="{!longitude}" />
+        </div>
+      </apex:form>
+      <!-- / PRIMARY CONTENT WRAPPER -->
+    </div>
+    <!-- / REQUIRED SLDS WRAPPER -->
+  </body>
+
+  </html>
+</apex:page>
